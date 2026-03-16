@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -8,8 +8,22 @@ import { CreditCard, ShieldCheck, Zap, ArrowRight, Loader2 } from "lucide-react"
 import axios from "axios";
 
 export default function CheckoutPage() {
-    const { data: session } = useSession();
+    const { data: session, status, update } = useSession();
     const router = useRouter();
+
+    useEffect(() => {
+        if (status === "authenticated" && session?.user) {
+            const isPlanValid = 
+                session.user.subscriptionStatus === "active" && 
+                session.user.planExpiry && 
+                new Date(session.user.planExpiry) > new Date();
+            
+            if (isPlanValid) {
+                router.push("/dashboard");
+            }
+        }
+    }, [session, status, router]);
+
     const [loading, setLoading] = useState(false);
     const [coupon, setCoupon] = useState("");
     const [discount, setDiscount] = useState(0);
@@ -42,6 +56,7 @@ export default function CheckoutPage() {
                     razorpay_payment_id: "free_" + coupon,
                     razorpay_signature: "free_access"
                 });
+                await update();
                 router.push("/dashboard");
                 router.refresh();
             } catch (err) {
@@ -70,6 +85,8 @@ export default function CheckoutPage() {
                     try {
                         // 3. Verify Payment on Server
                         await axios.post("/api/payment/verify", response);
+                        // Refresh session to get new subscription status
+                        await update();
                         router.push("/dashboard");
                         router.refresh();
                     } catch (error) {

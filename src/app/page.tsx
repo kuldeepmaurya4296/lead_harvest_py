@@ -410,9 +410,15 @@ export default function LandingPage() {
                                     ))}
                                 </div>
 
-                                <Link href="/login" className="block">
+                                <Link 
+                                    href={
+                                        !session ? "/login" : 
+                                        (session.user.subscriptionStatus === 'active' ? "/dashboard" : "/checkout")
+                                    } 
+                                    className="block"
+                                >
                                     <button className="w-full py-6 rounded-2xl bg-white text-black font-black text-xl hover:bg-gray-200 transition-all flex items-center justify-center gap-3 group">
-                                        GET ACCESS NOW
+                                        { (session?.user.subscriptionStatus === 'active') ? "GO TO DASHBOARD" : "GET ACCESS NOW"}
                                         <ArrowRight size={24} className="group-hover:translate-x-1 transition-transform" />
                                     </button>
                                 </Link>
