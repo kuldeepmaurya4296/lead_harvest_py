@@ -8,7 +8,7 @@ import { authOptions } from "@/lib/auth";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = await req.json();
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, planId } = await req.json();
     const session = await getServerSession(authOptions);
 
     if (!session) {
@@ -21,12 +21,21 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Configuration error" }, { status: 500 });
     }
 
-    // Handle Free Access or Standard Payment
+    await dbConnect();
+    const { Plan } = await import("@/models");
+    
+    let durationDays = 7;
+    if (planId) {
+        const plan = await Plan.findById(planId);
+        if (plan) {
+            durationDays = plan.durationDays;
+        }
+    }
+
     const expiryDate = new Date();
-    expiryDate.setDate(expiryDate.getDate() + 7); // 7 days from now
+    expiryDate.setDate(expiryDate.getDate() + durationDays);
 
     if (razorpay_signature === "free_access") {
-        await dbConnect();
         await User.findOneAndUpdate(
             { email: (session as any).user.email },
             {
@@ -44,7 +53,6 @@ export async function POST(req: Request) {
         .digest("hex");
 
     if (expectedSignature === razorpay_signature) {
-        await dbConnect();
         await User.findOneAndUpdate(
             { email: (session as any).user.email },
             {

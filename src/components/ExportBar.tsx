@@ -72,15 +72,30 @@ export default function ExportBar({ records, searchQuery, onSearchChange, apiBas
                     Export CSV
                 </button>
 
-                <a
-                    href={`${apiBase}/api/download`}
-                    download
+                <button
+                    onClick={async () => {
+                        try {
+                            const response = await fetch(`${apiBase}/api/download`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ records })
+                            });
+                            const blob = await response.blob();
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement("a");
+                            a.href = url;
+                            a.download = `leads_${new Date().toISOString().slice(0, 10)}.xlsx`;
+                            a.click();
+                            URL.revokeObjectURL(url);
+                        } catch (err) {
+                            alert("Failed to download Excel file.");
+                        }
+                    }}
                     className="btn-secondary"
                     style={{
                         display: "flex",
                         alignItems: "center",
                         gap: "6px",
-                        textDecoration: "none",
                         background: "rgba(16, 185, 129, 0.12)",
                         color: "#34d399",
                         borderColor: "rgba(16, 185, 129, 0.3)",
@@ -88,7 +103,7 @@ export default function ExportBar({ records, searchQuery, onSearchChange, apiBas
                 >
                     <Download size={15} />
                     Download Excel
-                </a>
+                </button>
             </div>
         </div>
     );

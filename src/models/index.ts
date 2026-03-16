@@ -41,5 +41,20 @@ const SearchSchema = new Schema({
     }]
 });
 
+const PlanSchema = new Schema({
+    name: { type: String, required: true },
+    price: { type: Number, required: true },
+    durationDays: { type: Number, required: true },
+    description: String,
+    features: [{
+        name: { type: String, required: true },
+        available: { type: Boolean, default: true }
+    }],
+    isPopular: { type: Boolean, default: false },
+    isActive: { type: Boolean, default: true },
+    createdAt: { type: Date, default: Date.now },
+});
+
 export const User = models.User || model('User', UserSchema);
 export const Search = models.Search || model('Search', SearchSchema);
+export const Plan = models.Plan || model('Plan', PlanSchema);

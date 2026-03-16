@@ -39,3 +39,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# local data and logs
+*.log
+api/gym_leads.xlsx
+api/lead_extractor.log

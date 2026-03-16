@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-╔══════════════════════════════════════════════════════════════════════╗
-║           Google Maps Lead Extractor — Production Ready             ║
-║                                                                      ║
-║  Extracts business data from Google Maps search results and stores   ║
-║  them in a local Excel file + Google Spreadsheet.                    ║
-╚══════════════════════════════════════════════════════════════════════╝
+# ************************************************************************
+# *          Google Maps Lead Extractor - Production Ready             *
+# *                                                                      *
+# *  Extracts business data from Google Maps search results and stores   *
+# *  them in a local Excel file + Google Spreadsheet.                    *
+# ************************************************************************
 
 Usage:
     python lead.py
@@ -40,13 +40,13 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 import config
 
-# ═══════════════════════════════════════════════════════════════════════
+# -----------------------------------------------------------------------
 #  Logging
-# ═══════════════════════════════════════════════════════════════════════
+# -----------------------------------------------------------------------
 
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s │ %(levelname)-8s │ %(message)s",
+    format="%(asctime)s | %(levelname)-8s | %(message)s",
     datefmt="%H:%M:%S",
     handlers=[
         logging.StreamHandler(sys.stdout),
@@ -56,9 +56,9 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 
-# ═══════════════════════════════════════════════════════════════════════
+# -----------------------------------------------------------------------
 #  Browser Helpers
-# ═══════════════════════════════════════════════════════════════════════
+# -----------------------------------------------------------------------
 
 def create_driver(force_visible=False) -> webdriver.Chrome:
     """Create and return a configured Chrome WebDriver instance."""
@@ -97,7 +97,7 @@ def safe_load(driver: webdriver.Chrome, url: str) -> bool:
     """Load a URL with retries. Returns True on success."""
     for attempt in range(1, config.MAX_RETRIES + 1):
         try:
-            log.info("Loading URL (attempt %d/%d) …", attempt, config.MAX_RETRIES)
+            log.info("Loading URL (attempt %d/%d)...", attempt, config.MAX_RETRIES)
             driver.get(url)
             WebDriverWait(driver, config.PAGE_LOAD_TIMEOUT).until(
                 EC.presence_of_element_located((By.XPATH, '//div[@role="feed"]'))
@@ -112,16 +112,16 @@ def safe_load(driver: webdriver.Chrome, url: str) -> bool:
     return False
 
 
-# ═══════════════════════════════════════════════════════════════════════
-#  Step 1 — Gather Business Links
-# ═══════════════════════════════════════════════════════════════════════
+# -----------------------------------------------------------------------
+#  Step 1 - Gather Business Links
+# -----------------------------------------------------------------------
 
 def get_business_links(driver: webdriver.Chrome) -> list[dict]:
     """
     Scroll the results panel and collect all visible listing links.
     Returns a list of dicts: [{"name": ..., "link": ...}, ...]
     """
-    log.info("Scrolling results panel to reveal listings …")
+    log.info("Scrolling results panel to reveal listings -")
     try:
         feed = driver.find_element(By.XPATH, '//div[@role="feed"]')
     except NoSuchElementException:
@@ -136,7 +136,7 @@ def get_business_links(driver: webdriver.Chrome) -> list[dict]:
         time.sleep(config.SCROLL_PAUSE_SEC)
         current = driver.find_elements(By.XPATH, '//a[contains(@href, "/maps/place")]')
         log.info(
-            "  Scroll %d/%d — visible links: %d",
+            "  Scroll %d/%d - visible links: %d",
             scroll_idx, config.SCROLL_ROUNDS, len(current),
         )
         if len(current) >= config.MAX_RESULTS:
@@ -163,9 +163,9 @@ def get_business_links(driver: webdriver.Chrome) -> list[dict]:
     return results
 
 
-# ═══════════════════════════════════════════════════════════════════════
-#  Step 2 — Extract Detail from Each Business Page
-# ═══════════════════════════════════════════════════════════════════════
+# -----------------------------------------------------------------------
+#  Step 2 - Extract Detail from Each Business Page
+# -----------------------------------------------------------------------
 
 def _extract_text(driver: webdriver.Chrome, xpath: str) -> str:
     """Return text of the first element matching *xpath*, or ''."""
@@ -292,10 +292,10 @@ def extract_business_details(
                     "About": about,
                 }
             )
-            log.info("    ✓ City=%s | Phone=%s | Website=%s", city, phone[:30] if phone else "—", website[:40] if website else "—")
+            log.info("    - City=%s | Phone=%s | Website=%s", city, phone[:30] if phone else "-", website[:40] if website else "-")
 
         except Exception as exc:
-            log.warning("    ✗ Failed to extract %s: %s", entry["name"], exc)
+            log.warning("    - Failed to extract %s: %s", entry["name"], exc)
             results.append(
                 {
                     "Name": entry["name"],
@@ -311,9 +311,9 @@ def extract_business_details(
     return results
 
 
-# ═══════════════════════════════════════════════════════════════════════
-#  Step 3 — Save to Excel
-# ═══════════════════════════════════════════════════════════════════════
+# -----------------------------------------------------------------------
+#  Step 3 - Save to Excel
+# -----------------------------------------------------------------------
 
 def save_to_excel(data: list[dict], filepath: str | None = None) -> str:
     """
@@ -325,7 +325,7 @@ def save_to_excel(data: list[dict], filepath: str | None = None) -> str:
     df_new = pd.DataFrame(data, columns=config.COLUMNS)
 
     if os.path.exists(filepath):
-        log.info("Existing Excel file found — merging & deduplicating …")
+        log.info("Existing Excel file found - merging & deduplicating -")
         df_old = pd.read_excel(filepath)
         df_combined = pd.concat([df_old, df_new], ignore_index=True)
         df_combined.drop_duplicates(subset=["Name", "Phone"], keep="last", inplace=True)
@@ -333,13 +333,13 @@ def save_to_excel(data: list[dict], filepath: str | None = None) -> str:
         df_combined = df_new
 
     df_combined.to_excel(filepath, index=False)
-    log.info("Excel saved → %s  (%d rows)", filepath, len(df_combined))
+    log.info("Excel saved - %s  (%d rows)", filepath, len(df_combined))
     return filepath
 
 
-# ═══════════════════════════════════════════════════════════════════════
-#  Step 4 — Update Google Spreadsheet
-# ═══════════════════════════════════════════════════════════════════════
+# -----------------------------------------------------------------------
+#  Step 4 - Update Google Spreadsheet
+# -----------------------------------------------------------------------
 
 def _extract_sheet_id(url: str) -> Optional[str]:
     """Pull the spreadsheet ID from a Google Sheets URL."""
@@ -433,9 +433,9 @@ def update_google_sheet(data: list[dict], sheet_url: str) -> bool:
         return False
 
 
-# ═══════════════════════════════════════════════════════════════════════
+# =======================================================================
 #  DuckDuckGo Extraction
-# ═══════════════════════════════════════════════════════════════════════
+# =======================================================================
 
 def duckduckgo_scrape(query: str, max_results: int = 50) -> list[dict]:
     """Extract leads using DuckDuckGo search (via ddgs)."""
@@ -500,24 +500,24 @@ def duckduckgo_scrape(query: str, max_results: int = 50) -> list[dict]:
     return results
 
 
-# ═══════════════════════════════════════════════════════════════════════
+# =======================================================================
 #  Main Entry Point
-# ═══════════════════════════════════════════════════════════════════════
+# =======================================================================
 
 def main():
     print()
-    print("╔══════════════════════════════════════════════════════════════╗")
-    print("║         Google Maps Lead Extractor  v1.0                    ║")
-    print("╚══════════════════════════════════════════════════════════════╝")
+    print("----------------------------------------------------------------")
+    print("-         Google Maps Lead Extractor  v1.0                    -")
+    print("----------------------------------------------------------------")
     print()
 
     # --- Inputs ---
-    maps_url = input("📍  Paste Google Maps search URL: ").strip()
+    maps_url = input("[-]  Paste Google Maps search URL: ").strip()
     if not maps_url:
         log.error("No URL provided. Exiting.")
         return
 
-    sheet_url = input("📊  Paste Google Spreadsheet URL (or press Enter to skip): ").strip()
+    sheet_url = input("[-]  Paste Google Spreadsheet URL (or press Enter to skip): ").strip()
     print()
 
     # --- Launch browser ---
@@ -537,7 +537,7 @@ def main():
 
         # Step 2: Extract details from each business page
         details = extract_business_details(driver, links)
-        log.info("Extraction complete — %d businesses processed.", len(details))
+        log.info("Extraction complete - %d businesses processed.", len(details))
 
         # Step 3: Save to Excel
         save_to_excel(details)
@@ -546,18 +546,18 @@ def main():
         if sheet_url:
             update_google_sheet(details, sheet_url)
         else:
-            log.info("Google Sheet URL not provided — skipping sheet update.")
+            log.info("Google Sheet URL not provided - skipping sheet update.")
 
     finally:
         driver.quit()
-        log.info("Browser closed. Done ✓")
+        log.info("Browser closed. Done -")
 
     print()
-    print("═" * 60)
-    print(f"  ✅  Results saved to  {config.EXCEL_OUTPUT_FILE}")
+    print("-" * 60)
+    print(f"  [SUCCESS]  Results saved to  {config.EXCEL_OUTPUT_FILE}")
     if sheet_url:
-        print(f"  ✅  Google Sheet updated")
-    print("═" * 60)
+        print(f"  [SUCCESS]  Google Sheet updated")
+    print("-" * 60)
     print()
 
 

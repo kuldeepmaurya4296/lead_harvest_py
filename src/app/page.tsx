@@ -26,7 +26,9 @@ import {
     Star,
     Layers,
     Cpu,
-    ExternalLink
+    ExternalLink,
+    XCircle,
+    Loader2
 } from "lucide-react";
 
 // ─── Shared Components ───────────────────────────────────────────────
@@ -365,69 +367,7 @@ export default function LandingPage() {
             </section>
 
             {/* Pricing Section */}
-            <section id="pricing" className="py-32 relative overflow-hidden">
-                <div className="max-w-7xl mx-auto px-6 relative z-10">
-                    <SectionHeader
-                        badge="Pricing"
-                        title="Simple. Affordable. Powerful."
-                        subtitle="Start harvesting results today with our simple weekly access pass."
-                    />
-
-                    <div className="max-w-md mx-auto">
-                        <motion.div
-                            initial={{ opacity: 0, y: 30 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true }}
-                            className="bg-gradient-to-tr from-primary-600 to-indigo-600 p-[1px] rounded-[40px] shadow-2xl shadow-primary-500/20"
-                        >
-                            <div className="bg-[#0A0F21] rounded-[39px] p-12 relative overflow-hidden text-center">
-                                <div className="absolute top-0 right-0 p-8 opacity-10">
-                                    <Target size={120} />
-                                </div>
-                                <h3 className="text-2xl font-black mb-2 uppercase tracking-tight">Harvester Pass</h3>
-                                <p className="text-gray-400 text-sm mb-8 font-medium">Weekly unlimited extraction</p>
-                                <div className="flex items-center justify-center gap-1 mb-10">
-                                    <span className="text-gray-500 text-2xl font-bold">₹</span>
-                                    <span className="text-7xl font-black text-white">100</span>
-                                    <span className="text-gray-500 font-black text-xl ml-2 uppercase tracking-tighter">/ 7 Days</span>
-                                </div>
-
-                                <div className="space-y-4 mb-12 text-left bg-white/5 rounded-3xl p-8 border border-white/5">
-                                    {[
-                                        "Unlimited Lead Extraction",
-                                        "Dual Search Engine Support",
-                                        "Cloud Sync & History Storage",
-                                        "Bulk WhatsApp Outreach",
-                                        "XLSX & CSV Data Export",
-                                        "Priority Server Access"
-                                    ].map((feature, i) => (
-                                        <div key={i} className="flex items-center gap-3">
-                                            <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center">
-                                                <CheckCircle2 size={12} className="text-green-500" />
-                                            </div>
-                                            <span className="text-gray-300 text-sm font-medium">{feature}</span>
-                                        </div>
-                                    ))}
-                                </div>
-
-                                <Link 
-                                    href={
-                                        !session ? "/login" : 
-                                        (session.user.subscriptionStatus === 'active' ? "/dashboard" : "/checkout")
-                                    } 
-                                    className="block"
-                                >
-                                    <button className="w-full py-6 rounded-2xl bg-white text-black font-black text-xl hover:bg-gray-200 transition-all flex items-center justify-center gap-3 group">
-                                        { (session?.user.subscriptionStatus === 'active') ? "GO TO DASHBOARD" : "GET ACCESS NOW"}
-                                        <ArrowRight size={24} className="group-hover:translate-x-1 transition-transform" />
-                                    </button>
-                                </Link>
-                                <p className="text-[10px] text-gray-500 mt-6 font-black uppercase tracking-[0.2em]">Cancel anytime • No hidden fees</p>
-                            </div>
-                        </motion.div>
-                    </div>
-                </div>
-            </section>
+            <PricingSection session={session} />
 
             {/* Documentation & Guide */}
             <section id="docs" className="py-32 border-t border-white/5 relative">
@@ -530,3 +470,119 @@ export default function LandingPage() {
         </div>
     );
 }
+
+const PricingSection = ({ session }: { session: any }) => {
+    const [plans, setPlans] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchPlans = async () => {
+            try {
+                const { data } = await axios.get("/api/plans");
+                setPlans(data);
+            } catch (err) {
+                console.error("Failed to fetch plans", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchPlans();
+    }, []);
+
+    if (loading) return (
+        <div className="py-32 flex flex-col items-center justify-center gap-4">
+            <Loader2 className="animate-spin text-primary-500" size={40} />
+            <p className="text-gray-500 font-bold text-sm tracking-widest uppercase">Loading exclusive deals...</p>
+        </div>
+    );
+
+    if (plans.length === 0) return null;
+
+    return (
+        <section id="pricing" className="py-32 relative overflow-hidden">
+            <div className="max-w-7xl mx-auto px-6 relative z-10">
+                <SectionHeader
+                    badge="Pricing"
+                    title="Simple. Affordable. Powerful."
+                    subtitle="Choose the plan that fits your growth ambitions."
+                />
+
+                <div className={`grid gap-8 ${
+                    plans.length === 1 ? 'max-w-md mx-auto' : 
+                    plans.length === 2 ? 'max-w-4xl mx-auto md:grid-cols-2' : 
+                    'md:grid-cols-3'
+                }`}>
+                    {plans.map((plan) => (
+                        <motion.div
+                            key={plan._id}
+                            initial={{ opacity: 0, y: 30 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            className={`relative rounded-[40px] p-[1px] ${
+                                plan.isPopular 
+                                ? 'bg-gradient-to-tr from-primary-600 to-indigo-600 shadow-2xl shadow-primary-500/20' 
+                                : 'bg-white/5 border border-white/5'
+                            }`}
+                        >
+                            <div className="bg-[#0A0F21] rounded-[39px] p-10 h-full flex flex-col relative overflow-hidden">
+                                {plan.isPopular && (
+                                    <div className="absolute top-0 right-0 p-8 opacity-10">
+                                        <Target size={120} />
+                                    </div>
+                                )}
+                                
+                                <div className="mb-8">
+                                    <h3 className="text-2xl font-black mb-2 uppercase tracking-tight">{plan.name}</h3>
+                                    <p className="text-gray-400 text-sm font-medium">{plan.description || `${plan.durationDays} days of unlimited power.`}</p>
+                                </div>
+
+                                <div className="flex items-center gap-1 mb-10">
+                                    <span className="text-gray-500 text-2xl font-bold">₹</span>
+                                    <span className="text-7xl font-black text-white">{plan.price}</span>
+                                    <span className="text-gray-500 font-black text-xl ml-2 uppercase tracking-tighter">/ {plan.durationDays} Days</span>
+                                </div>
+
+                                <div className="space-y-4 mb-12 flex-1 text-left bg-white/5 rounded-3xl p-8 border border-white/5">
+                                    {plan.features.map((feature: any, i: number) => (
+                                        <div key={i} className="flex items-center gap-3">
+                                            {feature.available ? (
+                                                <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">
+                                                    <CheckCircle2 size={12} className="text-green-500" />
+                                                </div>
+                                            ) : (
+                                                <div className="w-5 h-5 rounded-full bg-red-500/10 flex items-center justify-center shrink-0">
+                                                    <XCircle size={12} className="text-red-500/50" />
+                                                </div>
+                                            )}
+                                            <span className={`text-sm font-medium ${feature.available ? 'text-gray-300' : 'text-gray-600 line-through'}`}>
+                                                {feature.name}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <Link 
+                                    href={
+                                        !session ? "/login" : 
+                                        (session.user.subscriptionStatus === 'active' ? "/dashboard" : `/checkout?plan=${plan._id}`)
+                                    } 
+                                    className="block"
+                                >
+                                    <button className={`w-full py-6 rounded-2xl font-black text-xl transition-all flex items-center justify-center gap-3 group ${
+                                        plan.isPopular ? 'bg-white text-black hover:bg-gray-200' : 'bg-white/5 border border-white/10 text-white hover:bg-white/10'
+                                    }`}>
+                                        { (session?.user.subscriptionStatus === 'active') ? "GO TO DASHBOARD" : "GET ACCESS NOW"}
+                                        <ArrowRight size={24} className="group-hover:translate-x-1 transition-transform" />
+                                    </button>
+                                </Link>
+                                <p className="text-[10px] text-gray-500 mt-6 text-center font-black uppercase tracking-[0.2em]">Secure Checkout • Instant Setup</p>
+                            </div>
+                        </motion.div>
+                    ))}
+                </div>
+            </div>
+        </section>
+    );
+};
+
+import axios from "axios";

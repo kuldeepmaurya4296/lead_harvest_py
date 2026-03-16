@@ -13,6 +13,7 @@ import time
 import sys
 import os
 import uuid
+import asyncio
 from datetime import datetime
 from fastapi import FastAPI, Request
 from fastapi.responses import StreamingResponse, FileResponse, JSONResponse
@@ -31,7 +32,7 @@ from lead import (
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException
 
-# ─── App Setup ───────────────────────────────────────────────────────
+# --- App Setup -------------------------------------------------------
 app = FastAPI(title="Lead Extractor API", version="2.0.0")
 
 app.add_middleware(
@@ -42,36 +43,36 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ─── In-Memory Job Store ─────────────────────────────────────────────
+# --- In-Memory Job Store ---------------------------------------------
 # Stores job metadata: status, results, timestamps
 jobs: dict[str, dict] = {}
 
-# ─── Helpers ─────────────────────────────────────────────────────────
+# --- Helpers ---------------------------------------------------------
 
 def format_sse(event_name: str, data: dict):
     return f"event: {event_name}\ndata: {json.dumps(data)}\n\n"
 
 
-# ─── API Routes ──────────────────────────────────────────────────────
+# --- API Routes ------------------------------------------------------
 
-@app.get("/health")
+@app.get("/api/health")
 async def health():
     return {"status": "ok", "version": "2.0.0", "timestamp": datetime.now().isoformat()}
 
-@app.get("/jobs")
+@app.get("/api/jobs")
 async def list_jobs():
     """Return a list of all past extraction jobs (most recent first)."""
     sorted_jobs = sorted(jobs.values(), key=lambda j: j.get("created_at", ""), reverse=True)
     return sorted_jobs
 
-@app.get("/jobs/{job_id}")
+@app.get("/api/jobs/{job_id}")
 async def get_job(job_id: str):
     """Get details about a specific job."""
     if job_id not in jobs:
         return JSONResponse(status_code=404, content={"error": "Job not found"})
     return jobs[job_id]
 
-@app.get("/stream")
+@app.get("/api/stream")
 async def stream_scrape(request: Request, url: str, model: str = "google_maps"):
     job_id = uuid.uuid4().hex[:8]
     q: queue.Queue = queue.Queue()
@@ -279,17 +280,27 @@ async def stream_scrape(request: Request, url: str, model: str = "google_maps"):
             if await request.is_disconnected():
                 break
             try:
-                msg = q.get(timeout=2.0)
+                # Use a loop with non-blocking get to be more cooperative with asyncio
+                msg = q.get_nowait()
                 if msg is None:
                     break
                 yield msg
             except queue.Empty:
                 yield ": keep-alive\n\n"
+                await asyncio.sleep(1)
 
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
+    return StreamingResponse(
+        event_generator(), 
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        }
+    )
 
 
-# ─── WhatsApp Automation ─────────────────────────────────────────────
+# --- WhatsApp Automation ---------------------------------------------
 whatsapp_driver = None
 
 def get_whatsapp_driver():
@@ -300,7 +311,7 @@ def get_whatsapp_driver():
         whatsapp_driver = create_driver(force_visible=True)
     return whatsapp_driver
 
-@app.post("/whatsapp/send-bulk")
+@app.post("/api/whatsapp/send-bulk")
 async def send_bulk_whatsapp(request: Request):
     if os.getenv("VERCEL") == "1":
         return JSONResponse(status_code=400, content={"error": "WhatsApp automation is not supported in Vercel. Please run locally."})
@@ -368,7 +379,7 @@ async def send_bulk_whatsapp(request: Request):
     threading.Thread(target=automation_thread, daemon=True).start()
     return {"message": "Automation started. Please ensure you are logged into WhatsApp Web in the window that opened."}
 
-@app.post("/download")
+@app.post("/api/download")
 async def download_excel(request: Request):
     data = await request.json()
     records = data.get("records", [])

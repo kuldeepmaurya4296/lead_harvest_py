@@ -38,8 +38,8 @@ export interface LeadRecord {
   contactedSteps?: boolean[];
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "/api";
-const STREAM_BASE = process.env.NEXT_PUBLIC_STREAM_BASE || "/api";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "";
+const STREAM_BASE = process.env.NEXT_PUBLIC_STREAM_BASE || "";
 
 export default function DashboardPage() {
   const { data: session } = useSession();
